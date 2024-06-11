@@ -10,6 +10,7 @@ import pandas as pd
 # ----------
 
 def _dict_key_from_val(dict_obj: dict, value: str) -> int:
+    if value == None: return None
     # Get dict key from it's value (inverse dict)
     # Will raise an error if value not found
     inv_dict = {v: k for k, v in dict_obj.items()}
@@ -21,8 +22,8 @@ def _model_preprocess(df: pd.DataFrame) -> pd.DataFrame:
 
     # Convert data types
     for col in df_cols:
-        if df_cols[col] == float: df[col] = df[col].astype('float')
-        elif df_cols[col] == int: df[col] = df[col].astype('int')
+        if type(df_cols[col]) == float: df[col] = df[col].astype('float')
+        elif type(df_cols[col]) == int: df[col] = df[col].astype('int')
 
     # Combine features
     df['Curricular_units_all_sem_approved'] = df['Curricular_units_1st_sem_approved'] * df['Curricular_units_2nd_sem_approved']
@@ -63,12 +64,12 @@ def predict(df: pd.DataFrame, model):
     prediction = _model_predict(df, model)
 
     with raw_data_placeholder.expander('View Raw Data'):
-        st.dataframe(data = df)
+        st.dataframe(df, use_container_width = True)
 
     with result_placeholder.expander('View Prediction', expanded = True):
         if len(df) == 1:
             # If only 1 student then don't show table
-            if prediction == 'Graduate':
+            if prediction == 'Enrolled/Graduate':
                 # https://share.streamlit.io/streamlit/emoji-shortcodes
                 st.success(
                     '# Congrats! :partying_face:\n'
@@ -118,7 +119,7 @@ def predict(df: pd.DataFrame, model):
 model = joblib.load('model/model.lz4')
 
 # Columns required by the model (do not change order!)
-# For numeric column, the data type must be specified
+# For numeric column, data type and max value must be specified
 df_cols = {
     'Application_mode': None,
     'Course': None,
@@ -126,12 +127,13 @@ df_cols = {
     'Tuition_fees_up_to_date': None,
     'Gender': None,
     'Scholarship_holder': None,
-    'Age_at_enrollment': int,
+    'Age_at_enrollment': 100,
     # 1st sem and 2nd sem will be combined later
-    'Curricular_units_1st_sem_approved': int,
-    'Curricular_units_2nd_sem_approved': int,
-    'Curricular_units_1st_sem_grade': float,
-    'Curricular_units_2nd_sem_grade': float
+    # Max value should be 24 for 3 years study (Indonesia)
+    'Curricular_units_1st_sem_approved': 24,
+    'Curricular_units_2nd_sem_approved': 24,
+    'Curricular_units_1st_sem_grade': 24.0,
+    'Curricular_units_2nd_sem_grade': 24.0
 }
 
 # Get number-category mapping for some columns (e.g. course)
@@ -160,11 +162,16 @@ with tab1:
         if csv_file:
             upload_df = pd.read_csv(csv_file, sep = ';')
 
+        upload_error_placeholder = st.empty()
         pred_upload = st.button('Predict', type = 'primary', key = 123)
+
         if pred_upload and csv_file:
+            upload_error_placeholder.empty()
             predict(upload_df, model)
             # # Reset data after each prediction
             # csv_file = None
+        elif pred_upload:
+            upload_error_placeholder.write(':red[No file uploaded!]')
 
 with tab2:
     with st.container(border = True):
@@ -178,21 +185,31 @@ with tab2:
                 # Show category in select box
                 input_value = st.selectbox(
                     label = col,
-                    options = map_dict.values()
+                    options = map_dict.values(),
+                    index = None
                 )
                 # Convert category to number (inverse dict)
                 input_value = _dict_key_from_val(map_dict, input_value)
             else:
                 # If not in category dict then it's numeric value
-                if df_cols[col] == int:
-                    input_value = st.number_input(label = col, min_value = 0, step = 1)
+                if type(df_cols[col]) == int:
+                    input_value = st.number_input(label = col, min_value = 0, max_value = df_cols[col], step = 1)
                 else:
-                    input_value = st.number_input(label = col, min_value = 0.0, step = 1.0)
+                    input_value = st.number_input(label = col, min_value = 0.0, max_value = df_cols[col], step = 1.0)
 
             form_df[col] = [input_value]
 
+        # Some form values are set to null (none) by default
+        # This will check if any of the values are still null
+        null_detected = form_df.isnull().values.any()
+
+        form_error_placeholder = st.empty()
         pred_form = st.button('Predict', type = 'primary', key = 456)
-        if pred_form:
+
+        if pred_form and not null_detected:
+            form_error_placeholder.empty()
             predict(form_df, model)
             # # Reset data after each prediction
             # form_df = pd.DataFrame()
+        elif pred_form:
+            form_error_placeholder.write(':red[There is at least 1 unfilled input!]')
