@@ -1,20 +1,18 @@
-# Commented line = already a subdependency
-
 pandas==2.2.2
-# numpy==1.26.4
+numpy==1.26.4
 jinja2==3.1.4
 
 sqlalchemy==2.0.30
 psycopg2-binary==2.9.9
 
+matplotlib==3.9.0
+seaborn==0.13.2
 dython==0.7.5
-# seaborn==0.13.2
-# matplotlib==3.9.0
 phik==0.12.4
 
-joblib==1.4.2
+scikit-learn==1.5.0
 category_encoders==2.6.3
-# scikit-learn==1.5.0
 xgboost==2.0.3
+joblib==1.4.2
 
 streamlit==1.35.0

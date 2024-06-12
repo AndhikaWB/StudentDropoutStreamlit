@@ -11,7 +11,7 @@ import pandas as pd
 
 def _dict_key_from_val(dict_obj: dict, value: str) -> int:
     if value == None: return None
-    # Get dict key from it's value (inverse dict)
+    # Get dict key from its value (inverse dict)
     # Will raise an error if value not found
     inv_dict = {v: k for k, v in dict_obj.items()}
     return int(inv_dict[value])
@@ -65,6 +65,7 @@ def predict(df: pd.DataFrame, model):
 
     with raw_data_placeholder.expander('View Raw Data'):
         st.dataframe(df, use_container_width = True)
+        st.write('**Note:** The leftmost column is the row id, and the prediction order is based on that.')
 
     with result_placeholder.expander('View Prediction', expanded = True):
         if len(df) == 1:
@@ -184,7 +185,7 @@ with tab2:
                 map_dict = cat_dict[col]
                 # Show category in select box
                 input_value = st.selectbox(
-                    label = col,
+                    label = col.replace('_', ' '),
                     options = map_dict.values(),
                     index = None
                 )
@@ -193,9 +194,19 @@ with tab2:
             else:
                 # If not in category dict then it's numeric value
                 if type(df_cols[col]) == int:
-                    input_value = st.number_input(label = col, min_value = 0, max_value = df_cols[col], step = 1)
+                    input_value = st.number_input(
+                        label = col.replace('_', ' '),
+                        min_value = 0,
+                        max_value = df_cols[col],
+                        step = 1
+                    )
                 else:
-                    input_value = st.number_input(label = col, min_value = 0.0, max_value = df_cols[col], step = 1.0)
+                    input_value = st.number_input(
+                        label = col.replace('_', ' '),
+                        min_value = 0.0,
+                        max_value = df_cols[col],
+                        step = 1.0
+                    )
 
             form_df[col] = [input_value]
 
